@@ -1,0 +1,21 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# IDE
+.idea/
+.claude/
+
+# Secrets — never commit
+configs/Cookies/cookies_nf.txt
+cookie-tool/
+
+# Local artifacts
+Claude_metodopuppeteer_files.zip
+nul
+
+# Local docs / analyses
+CREDENTIAL_TRANSMISSION_ANALYSIS.md
+SECURITY_ANALYSIS.md
+Security_Analysis_Report_Get-cookies-txt-LOCALLY.md
+USER_MANUAL.md
