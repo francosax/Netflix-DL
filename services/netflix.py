@@ -1,10 +1,18 @@
-import argparse, configparser,  glob, json, logging, os, re, shutil, subprocess, sys, time, ffmpy, pycountry, requests, tqdm
+import argparse, configparser,  glob, json, logging, os, re, shutil, subprocess, time, ffmpy, pycountry, requests, tqdm
 from bs4 import BeautifulSoup
 from threading import Thread
 from urllib.parse import urlsplit
 import utils.modules.pycaption as pycaption
 from http.cookiejar import MozillaCookieJar
 from configs.config import tool
+from services.netflix_errors import (
+	InvalidProfileError,
+	NetflixCookieError,
+	NetflixCookieExpiredError,
+	NetflixIdParseError,
+	NetflixRegionError,
+	NetflixUnsupportedContentError,
+)
 from helpers.aria2 import aria2
 from helpers.dfxp_to_srt import dfxp_to_srt
 from helpers.keyloader import keysaver
@@ -66,10 +74,9 @@ class netflix:
 		r = session.get("https://www.netflix.com/browse", cookies=cookies)
 
 		if not re.search(BUILD_REGEX, r.text):
-			print(
-				"cannot get BUILD_IDENTIFIER from the cookies you saved from the browser..."
+			raise NetflixCookieError(
+				"cannot get BUILD_IDENTIFIER from the cookies you saved from the browser"
 			)
-			sys.exit()
 
 		return re.search(BUILD_REGEX, r.text).group(1)
 
@@ -91,9 +98,8 @@ class netflix:
 			try:
 				cj = MozillaCookieJar(self.config["cookies_txt"])
 				cj.load()
-			except Exception:
-				print("invalid netscape format cookies file")
-				sys.exit()
+			except Exception as e:
+				raise NetflixCookieError("invalid netscape format cookies file") from e
 
 			cookies = dict()
 
@@ -164,18 +170,16 @@ class netflix:
 			if resp.status_code == 401:
 				self.logger.warning("401 Unauthorized, cookies is invalid.")
 			elif resp.text.strip() == "":
-				self.logger.error("title is not available in your Netflix region.")
-				exit(-1)
+				raise NetflixRegionError("title is not available in your Netflix region")
 
 			try:
 				t = resp.json()["video"]["type"]
 				return resp.json()
-			except Exception:
-				os.remove(self.config["cookies_file"])
-				self.logger.warning(
-					"Error getting metadata: Cookies expired\nplease fetch new cookies.txt"
-				)
-				exit(-1)
+			except Exception as e:
+				raise NetflixCookieExpiredError(
+					"Error getting metadata: cookies expired, please fetch new cookies.txt",
+					cookies_file=self.config["cookies_file"],
+				) from e
 
 	def Search(self, query):
 		session = requests.Session()
@@ -275,8 +279,9 @@ class netflix:
 				return int(nfID[0])
 
 			else:
-				self.logger.error('Detection of NF ID from the given url: Failed.')
-				sys.exit()
+				raise NetflixIdParseError(
+					"could not detect Netflix ID from the given URL: {}".format(content_id)
+				)
 
 	def CleanSubtitleVTT(self, file_content):
 		file_content = re.sub(r"{.*?}", "", file_content)
@@ -349,8 +354,7 @@ class netflix:
 		]
 
 		if not profilename in available_profiles:
-			self.logger.error("Error: Unknown profile: {}".format(profilename))
-			sys.exit(1)
+			raise InvalidProfileError("unknown profile: {}".format(profilename))
 
 		try:
 			video_keys = get_keys.GettingKEYS_Netflixv2(IDNet, profilename)
@@ -834,8 +838,9 @@ class netflix:
 				if data["video"]["type"] == "supplemental":
 					self.netflixType = "supplemental"
 				else:
-					self.logger.info(data["video"]["type"] + " is a unrecognized type!")
-					sys.exit(0)
+					raise NetflixUnsupportedContentError(
+						"{} is an unrecognized content type".format(data["video"]["type"])
+					)
 
 		######################################
 		if self.args.output:

@@ -1,7 +1,8 @@
-import argparse, logging
+import argparse, logging, os, sys
 from helpers.proxy_environ import proxy_env
 from datetime import datetime
 from services.netflix import netflix
+from services.netflix_errors import NetflixCookieExpiredError, NetflixError
 
 script_name = "NF Ripper"
 script_ver = "2.0.1.0"
@@ -104,11 +105,27 @@ if __name__ == "__main__":
     )
 
     netflix_ = netflix(args, commands)
+    exit_code = 0
     try:
         netflix_.main_netflix()
+    except KeyboardInterrupt:
+        print("\nInterrupted.")
+        exit_code = 130
+    except NetflixCookieExpiredError as e:
+        logging.error(str(e))
+        if e.cookies_file and os.path.exists(e.cookies_file):
+            os.remove(e.cookies_file)
+        exit_code = 1
+    except NetflixError as e:
+        logging.error(str(e))
+        exit_code = 1
+    except Exception:
+        logging.exception("NFripper crashed")
+        exit_code = 1
     finally:
         print(
             "\nNFripper took {} Sec".format(
                 int(float((datetime.now() - start).total_seconds()))
             )
         )
+    sys.exit(exit_code)
