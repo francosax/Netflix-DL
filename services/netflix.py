@@ -7,6 +7,7 @@ from http.cookiejar import MozillaCookieJar
 from configs.config import tool
 from services.netflix_errors import (
 	InvalidProfileError,
+	NetflixApiError,
 	NetflixCookieError,
 	NetflixCookieExpiredError,
 	NetflixIdParseError,
@@ -169,7 +170,12 @@ class netflix:
 
 			if resp.status_code == 401:
 				self.logger.warning("401 Unauthorized, cookies is invalid.")
-			elif resp.text.strip() == "":
+			elif 500 <= resp.status_code < 600:
+				raise NetflixApiError(
+					"Netflix API returned HTTP {} (server-side error, often transient - retry).".format(resp.status_code),
+					status_code=resp.status_code,
+				)
+			elif resp.status_code == 200 and resp.text.strip() == "":
 				raise NetflixRegionError("title is not available in your Netflix region")
 
 			try:
