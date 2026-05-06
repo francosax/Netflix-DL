@@ -13,6 +13,7 @@ cookie-tool/
 # Local artifacts
 Claude_metodopuppeteer_files.zip
 nul
+*.log
 
 # Local docs / analyses
 CREDENTIAL_TRANSMISSION_ANALYSIS.md
