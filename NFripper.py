@@ -1,5 +1,4 @@
-import argparse, json, os, logging
-from configs.config import tool
+import argparse, logging
 from helpers.proxy_environ import proxy_env
 from datetime import datetime
 from services.netflix import netflix
@@ -22,7 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("--keep", dest="keep", help="well keep all files after mux, by default all erased.", action="store_true")
     parser.add_argument("--only-2ch-audio", dest="only_2ch_audio", help="to force get only eac3 2.0 Ch audios.", action="store_true")
     parser.add_argument("--alang", dest="audiolang", nargs="*", help="download only selected audio languages", default=[],)
-    parser.add_argument("--AD", '--adlang', dest="AD", nargs="*", help="download only selected audio languages", default=[],)
+    parser.add_argument("--AD", '--adlang', dest="AD", nargs="*", help="download only selected audio description languages", default=[],)
     parser.add_argument("--slang", dest="sublang", nargs="*", help="download only selected subtitle languages", default=[],)
     parser.add_argument("--flang", dest="forcedlang", nargs="*", help="download only selected forced subtitle languages", default=[],)
     parser.add_argument('-t', "--title", dest="titlecustom", nargs=1, help="Customize the title of the show", default=[],)
@@ -64,37 +63,22 @@ if __name__ == "__main__":
 
     start = datetime.now()
 
+    log_level = getattr(logging, args.log_level.upper())
     if args.log_file:
         logging.basicConfig(
             filename=args.log_file,
             format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s",
             datefmt="%Y-%m-%d %I:%M:%S %p",
-            level=logging.DEBUG,
+            level=log_level,
         )
-    
+    elif log_level == logging.INFO:
+        logging.basicConfig(format="%(message)s", level=logging.INFO)
     else:
-        if args.log_level.lower() == "info":
-            logging.basicConfig(format="%(message)s", level=logging.INFO)
-        elif args.log_level.lower() == "debug":
-            logging.basicConfig(
-                format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s",
-                datefmt="%Y-%m-%d %I:%M:%S %p",
-                level=logging.DEBUG,
-            )
-        elif args.log_level.lower() == "warning":
-            logging.basicConfig(
-                format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s",
-                datefmt="%Y-%m-%d %I:%M:%S %p",
-                level=logging.WARNING,
-            )
-        elif args.log_level.lower() == "error":
-            logging.basicConfig(
-                format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s",
-                datefmt="%Y-%m-%d %I:%M:%S %p",
-                level=logging.ERROR,
-            )
-    
-    logging.getLogger(__name__)
+        logging.basicConfig(
+            format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %I:%M:%S %p",
+            level=log_level,
+        )
 
     group = {
         "UPLOAD": args.upload_ftp,
@@ -120,10 +104,11 @@ if __name__ == "__main__":
     )
 
     netflix_ = netflix(args, commands)
-    netflix_.main_netflix()
-
-    print(
-        "\nNFripper took {} Sec".format(
-            int(float((datetime.now() - start).total_seconds()))
+    try:
+        netflix_.main_netflix()
+    finally:
+        print(
+            "\nNFripper took {} Sec".format(
+                int(float((datetime.now() - start).total_seconds()))
+            )
         )
-    )  # total seconds
