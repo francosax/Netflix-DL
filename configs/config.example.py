@@ -101,8 +101,8 @@ BIN = {
 Config = {}
 
 Config["NETFLIX"] = {
-	"cookies_file": f"{dirPath}/configs/Cookies/cookies_nf.txt",
-	"cookies_txt": f"{dirPath}/configs/Cookies/cookies.txt",
+	"cookies_file": f"{dirPath}/configs/Cookies/cookies_nf.json",
+	"cookies_txt": f"{dirPath}/configs/Cookies/cookies_nf.txt",
 	"keys_file": f"{dirPath}/configs/KEYS/netflix.keys",
 	"token_file": f"{dirPath}/configs/Tokens/netflix_token.json",
 	"email": "enter your email address here", # Enter the email address of your Netflix account here
