@@ -131,7 +131,7 @@ class netflix:
 		return cookies, build
 
 	def shakti_api(self, nfid): #
-		url = f"https://www.netflix.com/nq/website/memberapi/{self.build}/metadata"
+		url = "https://www.netflix.com/nq/website/memberapi/release/metadata"
 		headers = {
 			"Accept": "*/*",
 			"Accept-Encoding": "gzip, deflate, br",
@@ -142,9 +142,9 @@ class netflix:
 			"Pragma": "no-cache",
 			"Sec-Fetch-Mode": "cors",
 			"Sec-Fetch-Site": "same-origin",
-			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.87 Safari/537.36",
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
 			"X-Netflix.browserName": "Chrome",
-			"X-Netflix.browserVersion": "79",
+			"X-Netflix.browserVersion": "147",
 			"X-Netflix.clientType": "akira",
 			"X-Netflix.esnPrefix": "NFCDCH-02-",
 			"X-Netflix.osFullName": "Windows 10",
@@ -363,7 +363,7 @@ class netflix:
 			raise InvalidProfileError("unknown profile: {}".format(profilename))
 
 		try:
-			video_keys = get_keys.GettingKEYS_Netflixv2(IDNet, profilename)
+			video_keys = get_keys.GettingKEYS_Netflixv2(IDNet, profilename, cookies=self.cookies)
 			if not video_keys == []:
 				video_keys = list(set(video_keys))
 				video_keys = [profilename] + video_keys
@@ -724,7 +724,7 @@ class netflix:
 			return
 
 		VideoList, AudioList, SubtitleList, ForcedList, checkerinfo = get_manifest(
-			self.args, NetflixID
+			self.args, NetflixID, cookies=self.cookies, build=self.build
 		).LoadManifest()
 
 		if self.args.check:

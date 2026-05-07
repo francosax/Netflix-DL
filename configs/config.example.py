@@ -109,8 +109,8 @@ Config["NETFLIX"] = {
 	"password": "enter your password here", # Enter the password of your Netflix account here
 	"manifest_language": "en-US",
 	"metada_language": "en",
-	"manifestEsn": "NFCDIE-03-{}".format(utils().random_hex(30)),
-	"androidEsn": "NFCDIE-03-{}".format(utils().random_hex(30)),
+	"manifestEsn": "NFCDCH-02-{}".format(utils().random_hex(30)),
+	"androidEsn": "NFCDCH-02-{}".format(utils().random_hex(30)),
 }
 
 #####################################(DIRS & FILES)##############################

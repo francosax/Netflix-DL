@@ -9,18 +9,43 @@ from configs.config import tool
 import httpx
 
 class MSLClient:
-	def __init__(self, profiles=None, wv_keyexchange=False, proxies=None):
+	def __init__(self, profiles=None, wv_keyexchange=False, proxies=None, cookies=None, build=None):
 
 		self.session = requests.session()
 		self.session = httpx
 		self.logger = logging.getLogger(__name__)
+		self.cookies = cookies or {}
+		self.build = build
+		self.http_headers = {
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+			"Accept": "*/*",
+			"Accept-Language": "en-US,en;q=0.9",
+			"Content-Type": "text/plain",
+			"Origin": "https://www.netflix.com",
+			"Referer": "https://www.netflix.com/",
+			"sec-ch-ua": '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
+			"sec-ch-ua-mobile": "?0",
+			"sec-ch-ua-platform": '"Windows"',
+			"sec-fetch-dest": "empty",
+			"sec-fetch-mode": "cors",
+			"sec-fetch-site": "same-origin",
+		}
 		if proxies:
 			self.session.proxies.update(proxies)
 
 		self.nf_endpoints = {
-			"manifest": "https://www.netflix.com/nq/msl_v1/cadmium/pbo_licenses/^1.0.0/router?reqName=manifest",
+			"manifest": "https://www.netflix.com/nq/msl_v1/cadmium/pbo_licenses/^1.0.0/router",
 			"license": "https://www.netflix.com/nq/msl_v1/cadmium/pbo_licenses/^1.0.0/router",
 		}
+		self.client_params = {
+			"clienttype": "akira",
+			"browsername": "chrome",
+			"browserversion": "147.0.0.0",
+			"osname": "windows",
+			"osversion": "10.0",
+		}
+		if self.build:
+			self.client_params["uiversion"] = self.build
 
 		######################################################################
 
@@ -122,6 +147,16 @@ class MSLClient:
 	def setRSA(self):
 		if os.path.isfile(self.save_rsa_location):
 			master_token = self.load_tokens()
+			cached_esn = master_token.get("esn")
+
+			if not cached_esn:
+				self.logger.debug("rsa file lacks esn, regenerating handshake")
+				self.session_keys["session_keys"] = self.generate_handshake()
+				return
+
+			self.esn = cached_esn
+			self.header["sender"] = self.esn
+
 			expires = master_token["expiration"]
 			valid_until = datetime.utcfromtimestamp(int(expires))
 			present_time = datetime.now()
@@ -167,7 +202,7 @@ class MSLClient:
 				'isNonMember': False,
 				'isUIAutoPlay': False,				
 				"imageSubtitleHeight": 1080,
-				"uiVersion": "shakti-v4bf615c3",
+				"uiVersion": "shakti-{}".format(self.build) if self.build else "shakti-v4bf615c3",
 				'uiPlatform': 'SHAKTI',
 				"clientVersion": "6.0026.291.011",
 				'desiredVmaf': 'plus_lts', # phone_plus_exp
@@ -195,8 +230,9 @@ class MSLClient:
 		}
 
 		request_data = self.msl_request(payload)
+		manifest_params = {"reqName": "manifest", "mainContentViewableId": str(viewable_id), **self.client_params}
 		response = self.session.post(self.nf_endpoints["manifest"], data=request_data,
-			params={"reqName": "manifest"})
+			params=manifest_params, cookies=self.cookies, headers=self.http_headers)
 		manifest = json.loads(json.dumps(self.decrypt_response(response.text)))
 
 		if manifest.get("result"): 
@@ -280,6 +316,9 @@ class MSLClient:
 		response = self.session.post(
 			url=self.nf_endpoints["manifest"],
 			json=request,
+			params={"reqName": "manifest", **self.client_params},
+			cookies=self.cookies,
+			headers=self.http_headers,
 		)
 		try:
 			if response.json().get("errordata"):
@@ -307,6 +346,7 @@ class MSLClient:
 			"sign_key": base64.standard_b64decode(tokens_data["sign_key"]),
 			"RSA_KEY": tokens_data["RSA_KEY"],
 			"expiration": tokens_data["expiration"],
+			"esn": tokens_data.get("esn"),
 		}
 
 		return data
@@ -324,6 +364,7 @@ class MSLClient:
 			),
 			"RSA_KEY": tokens_data["RSA_KEY"],
 			"expiration": tokens_data["expiration"],
+			"esn": self.esn,
 		}
 
 		with open(self.save_rsa_location, 'w', encoding='utf-8') as f:
@@ -456,8 +497,8 @@ class MSLClient:
 		header = self.header.copy()
 		header["handshake"] = is_handshake
 		header["userauthdata"] = {
-			"scheme": "EMAIL_PASSWORD",
-			"authdata": {"email": self.email, "password": self.password},
+			"scheme": "NETFLIXID",
+			"authdata": {},
 		}
 
 		header_envelope = self.msl_encrypt(self.session_keys, json.dumps(header))
@@ -540,7 +581,7 @@ class MSLClient:
 
 		request_data = self.msl_request(license_request_data)
 
-		resp = self.session.post(url=self.nf_endpoints["license"],data=request_data)
+		resp = self.session.post(url=self.nf_endpoints["license"], data=request_data, params={"reqName": "license", **self.client_params}, cookies=self.cookies, headers=self.http_headers)
 
 		try:
 			resp.json()

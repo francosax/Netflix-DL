@@ -1,3 +1,36 @@
+## Current state (May 2026) — does not produce video downloads
+
+Netflix has rotated the MSL protocol and manifest payload schema since this
+project was written. After a substantial refactor (NETFLIXID cookie-based
+auth instead of EMAIL_PASSWORD, persisted ESN, modern browser headers, live
+build identifier, current Chrome user-agent, updated metadata endpoint URL)
+the script now gets through:
+
+- `/nq/website/memberapi/release/metadata` — HTTP 200, returns title metadata
+- MSL handshake at `/nq/msl_v1/cadmium/pbo_licenses/^1.0.0/router` — HTTP 200,
+  master token issued, `x-netflix-cookieandmsl.profileguid.match: true`
+
+But the manifest call still returns **HTTP 502 with `X-Netflix.nfstatus: 2_14`**.
+The `2_X` prefix in Netflix's internal nfstatus convention indicates a client
+error — i.e. our request is malformed at the application layer. Specifically,
+the inner MSL payload (still hardcoded with fields like
+`clientVersion: "6.0026.291.011"` and `desiredVmaf: "plus_lts"`) appears to be
+out of date relative to what Netflix's manifest backend currently accepts. The
+payload is encrypted with the master token's session keys, so it can't be
+captured from a real browser session via DevTools — fixing this requires
+deeper reverse-engineering than has been done here.
+
+If you're picking this up: start by getting a clean MSL payload schema from
+a current open-source project that actually downloads, and replace the
+`load_playlist` payload in `helpers/Parsers/Netflix/MSLClient.py`.
+
+The cookie pipeline, ESN persistence, error model, and request fingerprint
+are now solid and worth keeping as a base.
+
+---
+
+## Original setup (kept for reference)
+
 1. Install python 3.10.7 (or any version from 3.8.x to 3.10.x), be sure to add python to PATH while installing it
 
 https://www.python.org/ftp/python/3.10.7/python-3.10.7-amd64.exe

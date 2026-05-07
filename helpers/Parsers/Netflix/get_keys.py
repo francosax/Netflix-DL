@@ -114,9 +114,10 @@ def __profiles(profile, addHEVCDO=False):
 
 	return profiles
 
-def GettingKEYS_Netflixv2(nfID, profile): #
-	
+def GettingKEYS_Netflixv2(nfID, profile, cookies=None): #
+
 	KEYS = []
+	cookies = cookies or {}
 
 	available_profiles = [
 		"High KEYS",
@@ -131,16 +132,16 @@ def GettingKEYS_Netflixv2(nfID, profile): #
 		exit(1)
 
 	logger.info(f"\nGetting {profile}...")
-	
+
 	profiles = __profiles(profile)
-	
+
 	try:
-		client = MSLClient(profiles=profiles)
+		client = MSLClient(profiles=profiles, cookies=cookies)
 		resp = client.load_playlist(int(nfID))
 		if resp is None:
 			if profile == 'HEVC KEYS':
 				profiles = __profiles(profile, addHEVCDO=True)
-				client = MSLClient(profiles=profiles)
+				client = MSLClient(profiles=profiles, cookies=cookies)
 				resp = client.load_playlist(int(nfID))
 	
 	except Exception as e:
